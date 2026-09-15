@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+.venv/
+env/
+
+# IDE / System
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+
+# Temp
+tmp/
+dist/
+build/
