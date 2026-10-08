@@ -11,7 +11,7 @@
 | **Domain** | Artificial Intelligence, Computer Vision, Smart Infrastructure |
 | **Model Architecture** | YOLOv8 (You Only Look Once v8 - Nano) |
 | **Technology Stack** | HTML5, CSS3 (Modern Tech Theme & Glassmorphism), JavaScript (ES6+ Modules), Python, OpenCV, YOLOv8 |
-| **Repository URL** | [github.com/vaitheeshwaransuji-2008/yolov8-smart-parking-system](https://github.com/vaitheeshwaransuji-2008/yolov8-smart-parking-system) |
+| **Repository URL** | [github.com/sujibalarajendran7508/yolov8-smart-parking-system](https://github.com/sujibalarajendran7508/yolov8-smart-parking-system) |
 | **Status** | Phase Completed - Working Prototype & Evaluation Platform |
 
 ---

@@ -37,7 +37,7 @@ A modern, professional, responsive web application and interactive product proto
 
 1. **Clone the Repository**:
    ```bash
-   git clone https://github.com/vaitheeshwaransuji-2008/yolov8-smart-parking-system.git
+   git clone https://github.com/sujibalarajendran7508/yolov8-smart-parking-system.git
    cd yolov8-smart-parking-system
    ```
 
