@@ -1,24 +1,26 @@
 /* ==========================================================================
-   AI Smart Parking System - State & Demo Dataset
+   AI Smart Parking System - State & Demo Dataset (Phase 2 Upgrade)
    ========================================================================== */
 
-// Initial parking slot distribution generator (50 total slots)
-// 32 occupied, 18 available -> 64% occupancy
-function createInitialSlots() {
+function createInitialSlotsForFacility(facilityId = 'ground') {
   const slots = [];
-  const zones = ['Zone A (East Deck)', 'Zone B (Central)', 'Zone C (West Plaza)', 'Zone D (Executive)'];
-  
-  // Specific list of 32 occupied slot indexes out of 50 to maintain exact 32/18 split
-  const occupiedIndexes = new Set([
-    1, 2, 4, 5, 7, 8, 9, 11, 13, 14, 16, 17, 19, 20, 22, 23, 25, 26, 28, 29, 31, 32, 34, 35, 37, 39, 41, 42, 44, 46, 47, 49
-  ]);
+  let totalCount = 50;
+  let zones = ['Zone A (East Deck)', 'Zone B (Central)', 'Zone C (West Plaza)', 'Zone D (Executive)'];
 
-  for (let i = 1; i <= 50; i++) {
-    const isOccupied = occupiedIndexes.has(i);
+  if (facilityId === 'tower') {
+    totalCount = 80;
+    zones = ['Floor 1 (Deck A)', 'Floor 2 (Deck B)', 'Floor 3 (Deck C)', 'VIP Roof Level'];
+  } else if (facilityId === 'plaza') {
+    totalCount = 30;
+    zones = ['Plaza North', 'Plaza South', 'EV Charging Hub'];
+  }
+
+  // Generate deterministic occupied ratio (~60%)
+  for (let i = 1; i <= totalCount; i++) {
+    const isOccupied = (i % 3 !== 0) && (i % 5 !== 0 || i % 2 === 0);
     const slotId = `P${i < 10 ? '0' + i : i}`;
-    const zoneIndex = Math.floor((i - 1) / 13) % zones.length;
-    
-    // Vehicle simulation details
+    const zoneIndex = Math.floor((i - 1) / (totalCount / zones.length)) % zones.length;
+
     let vehicleInfo = null;
     if (isOccupied) {
       const vehicleTypes = ['Sedan', 'SUV', 'Hatchback', 'EV Compact', 'Truck'];
@@ -36,9 +38,10 @@ function createInitialSlots() {
       number: i,
       status: isOccupied ? 'OCCUPIED' : 'AVAILABLE',
       zone: zones[zoneIndex],
-      distance: 80 + (i * 4), // distance in meters from main entry
-      isRecommended: slotId === 'P18', // Recommended slot per PPT requirements!
-      vehicle: vehicleInfo
+      distance: 60 + (i * 4),
+      isRecommended: slotId === 'P18',
+      vehicle: vehicleInfo,
+      reservation: null
     });
   }
   return slots;
@@ -46,11 +49,25 @@ function createInitialSlots() {
 
 // Global Application State Store
 window.SmartParkingStore = {
-  slots: createInitialSlots(),
+  activeFacility: 'ground',
+  facilities: {
+    ground: { name: 'Main Campus Deck', total: 50, slots: createInitialSlotsForFacility('ground') },
+    tower: { name: 'East Multi-Level Tower', total: 80, slots: createInitialSlotsForFacility('tower') },
+    plaza: { name: 'West Open Plaza & EV Hub', total: 30, slots: createInitialSlotsForFacility('plaza') }
+  },
+  
+  get slots() {
+    return this.facilities[this.activeFacility].slots;
+  },
+
   activeTab: 'dashboard',
   selectedSlot: null,
   isScanning: false,
+  isAutoTrafficActive: false,
+  autoTrafficTimer: null,
   selectedCamera: 'cam1',
+  visionFilterMode: 'normal', // 'normal', 'heatmap', 'night'
+  customROIs: [],
   lastUpdated: new Date().toLocaleTimeString(),
 
   // CCTV Camera presets for AI Detection Demo
@@ -110,9 +127,86 @@ window.SmartParkingStore = {
   getStats() {
     const total = this.slots.length;
     const occupied = this.slots.filter(s => s.status === 'OCCUPIED').length;
-    const available = total - occupied;
-    const percentage = Math.round((occupied / total) * 100);
-    return { total, occupied, available, percentage };
+    const reserved = this.slots.filter(s => s.status === 'RESERVED').length;
+    const available = total - occupied - reserved;
+    const percentage = Math.round(((occupied + reserved) / total) * 100);
+    return { total, occupied, reserved, available, percentage };
+  },
+
+  // Switch facility
+  switchFacility(facilityId) {
+    if (this.facilities[facilityId]) {
+      this.activeFacility = facilityId;
+      this.lastUpdated = new Date().toLocaleTimeString();
+    }
+  },
+
+  // Reserve slot
+  reserveSlot(slotId, driverName, plateNumber, durationHours) {
+    const slot = this.slots.find(s => s.id === slotId);
+    if (!slot) return null;
+
+    const ticketId = 'PK-' + Math.floor(100000 + Math.random() * 900000);
+    slot.status = 'RESERVED';
+    slot.reservation = {
+      ticketId,
+      driverName,
+      plateNumber,
+      duration: `${durationHours} Hour(s)`,
+      reservedAt: new Date().toLocaleTimeString(),
+      validUntil: new Date(Date.now() + durationHours * 3600000).toLocaleTimeString()
+    };
+
+    this.activityLog.unshift({
+      id: Date.now(),
+      time: 'Just now',
+      type: 'RESERVE',
+      slot: slot.id,
+      text: `Slot ${slot.id} reserved by ${driverName} (${plateNumber}). Pass ID: ${ticketId}.`,
+      badge: 'warning'
+    });
+
+    this.lastUpdated = new Date().toLocaleTimeString();
+    return slot.reservation;
+  },
+
+  // Random Traffic Ticker Event Generator
+  triggerRandomTrafficEvent() {
+    const randomSlot = this.slots[Math.floor(Math.random() * this.slots.length)];
+    if (!randomSlot) return;
+
+    if (randomSlot.status === 'OCCUPIED') {
+      randomSlot.status = 'AVAILABLE';
+      randomSlot.vehicle = null;
+      this.activityLog.unshift({
+        id: Date.now(),
+        time: 'Just now',
+        type: 'EXIT',
+        slot: randomSlot.id,
+        text: `Auto Traffic Ticker: Vehicle departed from Slot ${randomSlot.id}. Slot is now AVAILABLE.`,
+        badge: 'available'
+      });
+    } else if (randomSlot.status === 'AVAILABLE') {
+      randomSlot.status = 'OCCUPIED';
+      const plates = ['KA-01-EQ-9920', 'MH-04-AB-1234', 'DL-09-CC-5544', 'TN-07-ZZ-7788'];
+      randomSlot.vehicle = {
+        type: 'Auto Sedan',
+        plate: plates[Math.floor(Math.random() * plates.length)],
+        confidence: (92 + Math.random() * 6).toFixed(1),
+        parkedTime: 'Just now'
+      };
+      this.activityLog.unshift({
+        id: Date.now(),
+        time: 'Just now',
+        type: 'ENTRY',
+        slot: randomSlot.id,
+        text: `Auto Traffic Ticker: YOLOv8 detected vehicle entry in Slot ${randomSlot.id}. Slot is now OCCUPIED.`,
+        badge: 'occupied'
+      });
+    }
+
+    if (this.activityLog.length > 12) this.activityLog.pop();
+    this.lastUpdated = new Date().toLocaleTimeString();
   },
 
   // Toggle slot state simulation
@@ -120,9 +214,10 @@ window.SmartParkingStore = {
     const slot = this.slots.find(s => s.id === slotId);
     if (!slot) return;
     
-    if (slot.status === 'OCCUPIED') {
+    if (slot.status === 'OCCUPIED' || slot.status === 'RESERVED') {
       slot.status = 'AVAILABLE';
       slot.vehicle = null;
+      slot.reservation = null;
       this.activityLog.unshift({
         id: Date.now(),
         time: 'Just now',

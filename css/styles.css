@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AI-Based Smart Parking Detection System - Global Stylesheet
+   AI-Based Smart Parking Detection System - Global Stylesheet (Phase 2 Upgrade)
    Theme: Dark Navy High-Tech AI Dashboard
    ========================================================================== */
 
@@ -256,6 +256,16 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45);
 }
 
+.btn-warning {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 15px rgba(217, 119, 6, 0.3);
+}
+.btn-warning:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(217, 119, 6, 0.45);
+}
+
 .btn-sm {
   padding: 6px 12px;
   font-size: 0.8rem;
@@ -421,6 +431,14 @@ h1, h2, h3, h4, h5, h6 {
   transform: translateY(-3px);
 }
 
+.slot-card.reserved {
+  border-color: var(--color-ai-purple) !important;
+  box-shadow: 0 0 15px rgba(168, 85, 247, 0.3) !important;
+}
+.slot-card.reserved::before {
+  background: var(--color-ai-purple) !important;
+}
+
 .slot-card.recommended {
   border-color: var(--color-warning) !important;
   box-shadow: 0 0 20px rgba(245, 158, 11, 0.3) !important;
@@ -460,7 +478,7 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: 0.04em;
 }
 
-/* AI CCTV Canvas Overlay */
+/* AI CCTV Canvas Overlay & Filters */
 .video-container {
   position: relative;
   width: 100%;
@@ -469,6 +487,15 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: 14px;
   overflow: hidden;
   border: 1px solid var(--border-bright);
+}
+
+.video-container.night-vision-mode {
+  filter: sepia(100%) hue-rotate(90deg) saturate(300%) contrast(150%);
+}
+
+.video-container.heatmap-mode svg {
+  opacity: 0.8 !important;
+  filter: blur(8px) saturate(200%);
 }
 
 .cctv-canvas {
@@ -532,6 +559,16 @@ h1, h2, h3, h4, h5, h6 {
   white-space: nowrap;
 }
 
+/* QR Code Pass Card */
+.qr-pass-card {
+  background: #ffffff;
+  color: #0f172a;
+  padding: 20px;
+  border-radius: 14px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
 /* Modal Overlay */
 .modal-backdrop {
   position: fixed;
@@ -558,12 +595,14 @@ h1, h2, h3, h4, h5, h6 {
   background: var(--bg-card);
   border: 1px solid var(--border-bright);
   border-radius: 20px;
-  max-width: 520px;
+  max-width: 580px;
   width: 100%;
   padding: 28px;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
   transform: translateY(20px);
   transition: transform 0.25s ease;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 .modal-backdrop.active .modal-content {
@@ -605,6 +644,13 @@ h1, h2, h3, h4, h5, h6 {
 @keyframes slide-in {
   from { transform: translateX(100%); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
+}
+
+/* Print Specific PDF View */
+@media print {
+  body { background: #fff !important; color: #000 !important; }
+  .navbar, .btn, .toast-container { display: none !important; }
+  .glass-card, .glass-panel { border: 1px solid #ccc !important; box-shadow: none !important; background: #fff !important; color: #000 !important; }
 }
 
 /* Simple Responsive Utilities */

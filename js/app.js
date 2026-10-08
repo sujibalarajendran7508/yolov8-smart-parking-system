@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AI Smart Parking Detection System - Main Application Controller
+   AI Smart Parking Detection System - Main Controller (Phase 2 Upgrade)
    ========================================================================== */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -8,8 +8,9 @@ document.addEventListener('DOMContentLoaded', () => {
   let searchQuery = '';
   let selectedZone = 'ALL';
   let isNavigating = false;
+  let activeModalTab = 'inspect';
 
-  // Main Render Function
+  // Main Render Controller
   function renderApp() {
     const navbarEl = document.getElementById('navbarContainer');
     const mainEl = document.getElementById('mainContentContainer');
@@ -38,7 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (modalEl) {
-      modalEl.innerHTML = store.selectedSlot ? renderSlotModal(store.selectedSlot) : '';
+      modalEl.innerHTML = store.selectedSlot ? renderSlotModal(store.selectedSlot, activeModalTab) : '';
     }
 
     attachEventListeners();
@@ -46,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Event Listeners Attacher
   function attachEventListeners() {
-    // Nav Tab Click Handlers
+    // Nav Tab Clicks
     document.querySelectorAll('[data-tab]').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
@@ -65,6 +66,35 @@ document.addEventListener('DOMContentLoaded', () => {
     if (mobileBtn && navLinks) {
       mobileBtn.addEventListener('click', () => {
         navLinks.classList.toggle('active');
+      });
+    }
+
+    // Facility Selector Dropdown
+    const facilitySelect = document.getElementById('facilitySelector');
+    if (facilitySelect) {
+      facilitySelect.addEventListener('change', (e) => {
+        store.switchFacility(e.target.value);
+        showToast(`Switched active facility to ${store.facilities[e.target.value].name}.`, 'info');
+        renderApp();
+      });
+    }
+
+    // Auto Traffic Simulator Toggle
+    const toggleAutoBtn = document.getElementById('toggleAutoTrafficBtn');
+    if (toggleAutoBtn) {
+      toggleAutoBtn.addEventListener('click', () => {
+        store.isAutoTrafficActive = !store.isAutoTrafficActive;
+        if (store.isAutoTrafficActive) {
+          showToast('Auto Traffic Simulator started. Ticking vehicle entries/exits every 8s.', 'success');
+          store.autoTrafficTimer = setInterval(() => {
+            store.triggerRandomTrafficEvent();
+            renderApp();
+          }, 8000);
+        } else {
+          showToast('Auto Traffic Simulator paused.', 'info');
+          if (store.autoTrafficTimer) clearInterval(store.autoTrafficTimer);
+        }
+        renderApp();
       });
     }
 
@@ -104,40 +134,48 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // Reset Filters Button
-    const resetBtn = document.getElementById('resetSlotFilters');
-    if (resetBtn) {
-      resetBtn.addEventListener('click', () => {
-        currentFilter = 'ALL';
-        searchQuery = '';
-        selectedZone = 'ALL';
-        renderApp();
-      });
-    }
-
     // Slot Card Click (Open Modal Inspector)
     document.querySelectorAll('.slot-card[data-slot-id]').forEach(card => {
       card.addEventListener('click', () => {
         const slotId = card.getAttribute('data-slot-id');
         if (slotId) {
           store.selectedSlot = slotId;
+          activeModalTab = 'inspect';
           renderApp();
         }
       });
     });
 
-    // Modal Close Buttons
-    const closeBtn1 = document.getElementById('closeModalBtn');
-    const closeBtn2 = document.getElementById('closeModalBtn2');
-    const backdrop = document.getElementById('slotModalBackdrop');
+    // Modal Tabs (Inspect vs Reserve)
+    const tabInspect = document.getElementById('modalTabInspect');
+    const tabReserve = document.getElementById('modalTabReserve');
+    if (tabInspect) {
+      tabInspect.addEventListener('click', () => {
+        activeModalTab = 'inspect';
+        renderApp();
+      });
+    }
+    if (tabReserve) {
+      tabReserve.addEventListener('click', () => {
+        activeModalTab = 'reserve';
+        renderApp();
+      });
+    }
 
+    // Modal Close Buttons
     const closeModal = () => {
       store.selectedSlot = null;
       renderApp();
     };
 
-    if (closeBtn1) closeBtn1.addEventListener('click', closeModal);
-    if (closeBtn2) closeBtn2.addEventListener('click', closeModal);
+    const close1 = document.getElementById('closeModalBtn');
+    const close2 = document.getElementById('closeModalBtn2');
+    const close3 = document.getElementById('closeModalBtn3');
+    const backdrop = document.getElementById('slotModalBackdrop');
+
+    if (close1) close1.addEventListener('click', closeModal);
+    if (close2) close2.addEventListener('click', closeModal);
+    if (close3) close3.addEventListener('click', closeModal);
     if (backdrop) {
       backdrop.addEventListener('click', (e) => {
         if (e.target === backdrop) closeModal();
@@ -158,6 +196,61 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
+    // Reservation Form Submit Handler
+    const resForm = document.getElementById('reservationForm');
+    if (resForm) {
+      resForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const driver = document.getElementById('resDriverName').value;
+        const plate = document.getElementById('resPlateNumber').value;
+        const duration = parseInt(document.getElementById('resDuration').value);
+
+        if (driver && plate) {
+          const res = store.reserveSlot(store.selectedSlot, driver, plate, duration);
+          if (res) {
+            showToast(`Slot ${store.selectedSlot} reserved successfully! Ticket Pass: ${res.ticketId}`, 'success');
+            store.selectedSlot = null;
+            renderApp();
+          }
+        }
+      });
+    }
+
+    // Vision Mode Filter Buttons (AI Detection View)
+    document.querySelectorAll('[data-vision-filter]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        store.visionFilterMode = btn.getAttribute('data-vision-filter');
+        showToast(`Switched CCTV Vision mode to ${store.visionFilterMode.toUpperCase()}.`, 'info');
+        renderApp();
+      });
+    });
+
+    // Add Custom ROI Box Button
+    const addRoiBtn = document.getElementById('addCustomRoiBtn');
+    if (addRoiBtn) {
+      addRoiBtn.addEventListener('click', () => {
+        const newRoi = {
+          label: `Custom ROI ${store.customROIs.length + 1}`,
+          x: 20 + Math.floor(Math.random() * 50),
+          y: 20 + Math.floor(Math.random() * 50),
+          w: 20,
+          h: 25
+        };
+        store.customROIs.push(newRoi);
+        showToast(`Added custom ROI slot coordinate bounding box to CCTV canvas.`, 'success');
+        renderApp();
+      });
+    }
+
+    const clearRoisBtn = document.getElementById('clearCustomRoisBtn');
+    if (clearRoisBtn) {
+      clearRoisBtn.addEventListener('click', () => {
+        store.customROIs = [];
+        showToast(`Cleared custom ROI bounding boxes.`, 'info');
+        renderApp();
+      });
+    }
+
     // Camera Switcher Buttons (AI Detection View)
     document.querySelectorAll('[data-cam]').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -166,7 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
 
-    // Start AI Detection Button (AI Detection View)
+    // Start AI Detection Button
     const startDetectionBtn = document.getElementById('startDetectionBtn');
     if (startDetectionBtn) {
       startDetectionBtn.addEventListener('click', () => {
@@ -177,7 +270,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
           store.isScanning = false;
           store.lastUpdated = new Date().toLocaleTimeString();
-          showToast('YOLOv8 scan complete. All 32 vehicle bounding boxes verified with >95% confidence.', 'success');
+          showToast('YOLOv8 scan complete. Bounding box coordinates recalibrated.', 'success');
           renderApp();
         }, 2500);
       });
@@ -189,11 +282,38 @@ document.addEventListener('DOMContentLoaded', () => {
       startNavBtn.addEventListener('click', () => {
         isNavigating = !isNavigating;
         if (isNavigating) {
-          showToast('Turn-by-turn guidance to Slot P18 started.', 'success');
+          showToast('Animated turn-by-turn guidance simulation started.', 'success');
         } else {
-          showToast('Navigation simulation ended.', 'info');
+          showToast('Navigation simulation stopped.', 'info');
         }
         renderApp();
+      });
+    }
+
+    // CSV Log Exporter Button (Analytics View)
+    const exportCsvBtn = document.getElementById('exportCsvBtn');
+    if (exportCsvBtn) {
+      exportCsvBtn.addEventListener('click', () => {
+        let csvContent = 'data:text/csv;charset=utf-8,ID,Time,Type,Slot,Details\n';
+        store.activityLog.forEach(log => {
+          csvContent += `${log.id},"${log.time}","${log.type}","${log.slot}","${log.text.replace(/"/g, '""')}"\n`;
+        });
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement('a');
+        link.setAttribute('href', encodedUri);
+        link.setAttribute('download', `SmartPark_Activity_Log_${Date.now()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast('Exported parking activity log CSV file successfully.', 'success');
+      });
+    }
+
+    // PDF Print Button (Analytics View)
+    const printReportBtn = document.getElementById('printReportBtn');
+    if (printReportBtn) {
+      printReportBtn.addEventListener('click', () => {
+        window.print();
       });
     }
   }

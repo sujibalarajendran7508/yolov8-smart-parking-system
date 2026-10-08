@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Analytics View Component (Admin Dashboard & Impact Metrics)
+   Analytics View Component (Export Suite Upgrade)
    ========================================================================== */
 
 function renderAnalyticsView() {
@@ -9,16 +9,28 @@ function renderAnalyticsView() {
   return `
     <div class="analytics-page" style="padding: 32px 0;">
       <!-- Page Header -->
-      <div style="margin-bottom: 28px;">
-        <div class="badge badge-ai" style="margin-bottom: 10px;">
-          📈 ADMINISTRATOR ANALYTICS & INSIGHTS
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 16px; margin-bottom: 28px;">
+        <div>
+          <div class="badge badge-ai" style="margin-bottom: 10px;">
+            📈 ADMINISTRATOR ANALYTICS & INSIGHTS
+          </div>
+          <h1 style="font-size: 2.2rem; margin-bottom: 6px;">
+            Smart Parking System Analytics
+          </h1>
+          <p style="color: var(--text-muted); font-size: 1rem;">
+            Historical occupancy trends, entry/exit throughput, peak-hour bottlenecks, and expected outcome benchmarks.
+          </p>
         </div>
-        <h1 style="font-size: 2.2rem; margin-bottom: 6px;">
-          Smart Parking System Analytics
-        </h1>
-        <p style="color: var(--text-muted); font-size: 1rem;">
-          Historical occupancy trends, entry/exit throughput, peak-hour bottlenecks, and expected outcome benchmarks.
-        </p>
+
+        <!-- Export Suite Action Buttons -->
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button class="btn btn-secondary" id="exportCsvBtn">
+            📥 Export Logs (CSV)
+          </button>
+          <button class="btn btn-primary" id="printReportBtn">
+            🖨️ Print / Save Report (PDF)
+          </button>
+        </div>
       </div>
 
       <!-- Top Summary Metrics Grid -->
@@ -67,32 +79,24 @@ function renderAnalyticsView() {
           </h3>
           <div style="width: 100%; height: 220px; position: relative;">
             <svg width="100%" height="100%" viewBox="0 0 500 200" preserveAspectRatio="none">
-              <!-- Y Axis Lines -->
               <line x1="40" y1="30" x2="480" y2="30" stroke="rgba(255,255,255,0.06)" stroke-dasharray="4 4"/>
               <line x1="40" y1="80" x2="480" y2="80" stroke="rgba(255,255,255,0.06)" stroke-dasharray="4 4"/>
               <line x1="40" y1="130" x2="480" y2="130" stroke="rgba(255,255,255,0.06)" stroke-dasharray="4 4"/>
               <line x1="40" y1="180" x2="480" y2="180" stroke="rgba(255,255,255,0.1)"/>
 
-              <!-- Axis Labels -->
               <text x="30" y="35" fill="#64748b" font-size="10" text-anchor="end">100%</text>
               <text x="30" y="85" fill="#64748b" font-size="10" text-anchor="end">60%</text>
               <text x="30" y="135" fill="#64748b" font-size="10" text-anchor="end">30%</text>
 
-              <!-- Occupancy Curve -->
               <path d="M 50 160 Q 110 170 170 110 T 290 40 T 400 90 T 470 150" fill="none" stroke="var(--color-ai-cyan)" stroke-width="3"/>
-              
-              <!-- Gradient Area fill under curve -->
               <path d="M 50 160 Q 110 170 170 110 T 290 40 T 400 90 T 470 150 L 470 180 L 50 180 Z" fill="rgba(56,189,248,0.15)"/>
 
-              <!-- Data Dots -->
               <circle cx="170" cy="110" r="4" fill="#38bdf8"/>
-              <circle cx="290" cy="40" r="6" fill="#f59e0b"/> <!-- Peak -->
+              <circle cx="290" cy="40" r="6" fill="#f59e0b"/>
               <circle cx="400" cy="90" r="4" fill="#38bdf8"/>
 
-              <!-- Peak Label -->
               <text x="290" y="25" fill="#f59e0b" font-size="11" font-weight="bold" text-anchor="middle">PEAK 92% (1:00 PM)</text>
 
-              <!-- X Axis Labels -->
               <text x="50" y="195" fill="#64748b" font-size="10">06:00</text>
               <text x="170" y="195" fill="#64748b" font-size="10">09:00</text>
               <text x="290" y="195" fill="#64748b" font-size="10">13:00</text>
@@ -112,24 +116,18 @@ function renderAnalyticsView() {
             <svg width="100%" height="100%" viewBox="0 0 500 200" preserveAspectRatio="none">
               <line x1="40" y1="170" x2="480" y2="170" stroke="rgba(255,255,255,0.1)"/>
               
-              <!-- Bars Groups (Entry: Blue, Exit: Pink) -->
-              <!-- 08:00 AM -->
               <rect x="70" y="80" width="16" height="90" fill="var(--color-available)" rx="3"/>
               <rect x="90" y="140" width="16" height="30" fill="var(--color-occupied)" rx="3"/>
 
-              <!-- 11:00 AM -->
               <rect x="170" y="30" width="16" height="140" fill="var(--color-available)" rx="3"/>
               <rect x="190" y="110" width="16" height="60" fill="var(--color-occupied)" rx="3"/>
 
-              <!-- 02:00 PM -->
               <rect x="270" y="60" width="16" height="110" fill="var(--color-available)" rx="3"/>
               <rect x="290" y="50" width="16" height="120" fill="var(--color-occupied)" rx="3"/>
 
-              <!-- 05:00 PM -->
               <rect x="370" y="120" width="16" height="50" fill="var(--color-available)" rx="3"/>
               <rect x="390" y="35" width="16" height="135" fill="var(--color-occupied)" rx="3"/>
 
-              <!-- X Labels -->
               <text x="88" y="190" fill="#64748b" font-size="10" text-anchor="middle">08:00 AM</text>
               <text x="188" y="190" fill="#64748b" font-size="10" text-anchor="middle">11:00 AM</text>
               <text x="288" y="190" fill="#64748b" font-size="10" text-anchor="middle">02:00 PM</text>

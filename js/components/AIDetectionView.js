@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AI Detection View Component (YOLOv8 Computer Vision Simulator)
+   AI Detection View Component (YOLOv8 Vision & ROI Canvas Upgrade)
    ========================================================================== */
 
 function renderAIDetectionView() {
@@ -19,6 +19,15 @@ function renderAIDetectionView() {
     `;
   }).join('');
 
+  // Custom User-Drawn ROIs
+  const customBboxHtml = store.customROIs.map(roi => `
+    <div class="bbox" style="left: ${roi.x}%; top: ${roi.y}%; width: ${roi.w}%; height: ${roi.h}%; border-color: var(--color-warning); border-style: dashed;">
+      <div class="bbox-label" style="background: var(--color-warning); color: #000;">
+        ${roi.label}
+      </div>
+    </div>
+  `).join('');
+
   return `
     <div class="ai-detection-page" style="padding: 32px 0;">
       <!-- Page Header -->
@@ -32,6 +41,33 @@ function renderAIDetectionView() {
         <p style="color: var(--text-muted); font-size: 1rem;">
           Simulated live computer vision stream processing parking lot CCTV footage & ROI overlap.
         </p>
+      </div>
+
+      <!-- Vision Filter & Mode Toolbar -->
+      <div class="glass-card" style="padding: 14px 20px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <strong style="font-size: 0.88rem; color: var(--text-muted);">Vision Mode:</strong>
+          <button class="btn btn-sm ${store.visionFilterMode === 'normal' ? 'btn-primary' : 'btn-secondary'}" data-vision-filter="normal">
+            📷 Normal CCTV
+          </button>
+          <button class="btn btn-sm ${store.visionFilterMode === 'heatmap' ? 'btn-primary' : 'btn-secondary'}" data-vision-filter="heatmap">
+            🔥 Thermal Heatmap
+          </button>
+          <button class="btn btn-sm ${store.visionFilterMode === 'night' ? 'btn-primary' : 'btn-secondary'}" data-vision-filter="night">
+            🌙 Night Vision
+          </button>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-sm btn-warning" id="addCustomRoiBtn">
+            ➕ Add Custom Slot ROI
+          </button>
+          ${store.customROIs.length > 0 ? `
+            <button class="btn btn-sm btn-secondary" id="clearCustomRoisBtn">
+              🧹 Clear Custom ROIs (${store.customROIs.length})
+            </button>
+          ` : ''}
+        </div>
       </div>
 
       <!-- Main Detection Layout -->
@@ -55,7 +91,7 @@ function renderAIDetectionView() {
           </div>
 
           <!-- Video Stream Container -->
-          <div class="video-container ${store.isScanning ? 'laser-scanning' : ''}" style="background: ${cam.bgGradient}; position: relative;">
+          <div class="video-container ${store.isScanning ? 'laser-scanning' : ''} ${store.visionFilterMode === 'night' ? 'night-vision-mode' : ''} ${store.visionFilterMode === 'heatmap' ? 'heatmap-mode' : ''}" style="background: ${cam.bgGradient}; position: relative;">
             <!-- Simulated Parking Ground Graphics (SVG) -->
             <svg width="100%" height="100%" viewBox="0 0 1000 562" preserveAspectRatio="none" style="position: absolute; top: 0; left: 0; opacity: 0.4;">
               <!-- Parking Bay Markers -->
@@ -73,6 +109,7 @@ function renderAIDetectionView() {
 
             <!-- Detection Bounding Boxes Overlay -->
             ${bboxHtml}
+            ${customBboxHtml}
 
             <!-- Scanline overlay effect -->
             <div class="scanline-overlay"></div>
@@ -80,7 +117,7 @@ function renderAIDetectionView() {
 
             <!-- Top Camera Info Banner -->
             <div style="position: absolute; top: 12px; left: 16px; background: rgba(0,0,0,0.7); padding: 4px 10px; border-radius: 6px; font-family: var(--font-mono); font-size: 0.75rem; color: var(--color-ai-cyan); border: 1px solid rgba(56,189,248,0.3);">
-              REC 🔴 | 1080p @ 30 FPS | YOLOv8n-weights.pt
+              REC 🔴 | 1080p @ 30 FPS | YOLOv8n-weights.pt | MODE: ${store.visionFilterMode.toUpperCase()}
             </div>
             
             <div style="position: absolute; top: 12px; right: 16px; background: rgba(0,0,0,0.7); padding: 4px 10px; border-radius: 6px; font-family: var(--font-mono); font-size: 0.75rem; color: var(--color-available);">

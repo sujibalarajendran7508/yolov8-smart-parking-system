@@ -1,8 +1,8 @@
 /* ==========================================================================
-   Navigation View Component (Smart Slot Finder & Route Simulation)
+   Navigation View Component (Animated Vehicle Route Simulation Upgrade)
    ========================================================================== */
 
-function renderNavigationView(isNavigating = false) {
+function renderNavigationView(isNavigating = false, navSpeed = 1) {
   const store = window.SmartParkingStore;
   const recommendedSlot = store.slots.find(s => s.id === 'P18') || store.slots[17];
 
@@ -11,7 +11,7 @@ function renderNavigationView(isNavigating = false) {
       <!-- Page Header -->
       <div style="margin-bottom: 28px;">
         <div class="badge badge-warning" style="margin-bottom: 10px;">
-          🗺️ INTELLIGENT SLOT ALLOCATION
+          🗺️ INTELLIGENT SLOT ALLOCATION & ANIMATED ROUTE
         </div>
         <h1 style="font-size: 2.2rem; margin-bottom: 6px;">
           Find Nearest Parking Slot
@@ -38,10 +38,12 @@ function renderNavigationView(isNavigating = false) {
           </div>
 
           <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 10px;">
-            <button class="btn btn-emerald" id="startNavigationBtn" style="padding: 14px 28px; font-size: 1rem;">
-              <span>🚘</span> ${isNavigating ? 'Cancel Navigation' : 'Navigate to Slot P18'}
-            </button>
-            <span style="font-size: 0.75rem; color: var(--text-dim);">Simulated Turn-by-Turn Guidance</span>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-emerald" id="startNavigationBtn" style="padding: 12px 24px; font-size: 0.95rem;">
+                <span>🚘</span> ${isNavigating ? 'Stop Vehicle Simulation' : 'Start Animated Driving Simulation'}
+              </button>
+            </div>
+            <span style="font-size: 0.75rem; color: var(--text-dim);">Live Moving Vehicle Map Path</span>
           </div>
         </div>
       </div>
@@ -50,14 +52,14 @@ function renderNavigationView(isNavigating = false) {
       ${isNavigating ? `
         <div class="glass-card" style="padding: 20px 24px; margin-bottom: 28px; border-left: 4px solid var(--color-available); background: rgba(16,185,129,0.08); animation: slide-in 0.3s ease;">
           <h4 style="font-size: 1rem; color: var(--color-available); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-            <span>📍</span> ACTIVE TURN-BY-TURN GUIDANCE (SIMULATION)
+            <span>🚘</span> ANIMATED VEHICLE DRIVING GUIDANCE (LIVE SIMULATION)
           </h4>
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; font-size: 0.88rem;">
             <div style="background: rgba(10,16,28,0.7); padding: 12px; border-radius: 8px;">
-              <strong style="color: var(--color-ai-cyan);">Step 1:</strong> Enter through Main Gate East (Barrier 01).
+              <strong style="color: var(--color-ai-cyan);">Step 1:</strong> Entry Gate East (Barrier 01).
             </div>
             <div style="background: rgba(10,16,28,0.7); padding: 12px; border-radius: 8px;">
-              <strong style="color: var(--color-ai-cyan);">Step 2:</strong> Drive 60 meters straight down Row B Aisle.
+              <strong style="color: var(--color-ai-cyan);">Step 2:</strong> Drive 60m straight down Row B Aisle.
             </div>
             <div style="background: rgba(10,16,28,0.7); padding: 12px; border-radius: 8px;">
               <strong style="color: var(--color-ai-cyan);">Step 3:</strong> Turn Left at Zone B Central Indicator.
@@ -69,10 +71,10 @@ function renderNavigationView(isNavigating = false) {
         </div>
       ` : ''}
 
-      <!-- Interactive Parking Layout Map Canvas (SVG Visualization) -->
+      <!-- Interactive Parking Layout Map Canvas (SVG Visualization with Animated Vehicle) -->
       <div class="glass-card" style="padding: 24px; position: relative;">
         <h3 style="font-size: 1.1rem; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
-          <span>Interactive Parking Map Visualization</span>
+          <span>Interactive Parking Map & Moving Vehicle Visualizer</span>
           <span style="font-size: 0.8rem; color: var(--text-dim);">Entrance ➡️ Row A/B/C/D ➡️ Slot P18</span>
         </h3>
 
@@ -137,12 +139,24 @@ function renderNavigationView(isNavigating = false) {
               <text x="310" y="50" fill="#fff" font-size="12" text-anchor="middle">P10</text>
             </g>
 
-            <!-- Navigation Path Animation Line from Entry to P18 -->
-            <path d="M 110 180 L 405 180 L 405 130" fill="none" stroke="var(--color-warning)" stroke-width="4" stroke-dasharray="10 6">
+            <!-- Navigation Path Line -->
+            <path id="navPath" d="M 110 180 L 405 180 L 405 130" fill="none" stroke="var(--color-warning)" stroke-width="4" stroke-dasharray="10 6">
               <animate attributeName="stroke-dashoffset" from="100" to="0" dur="2s" repeatCount="indefinite"/>
             </path>
 
-            <!-- Pulsing Target Marker on P18 -->
+            <!-- Animated Car Icon Moving Along Path -->
+            ${isNavigating ? `
+              <g>
+                <circle r="12" fill="#38bdf8" stroke="#ffffff" stroke-width="2">
+                  <animateMotion path="M 110 180 L 405 180 L 405 130" dur="${4 / navSpeed}s" repeatCount="indefinite" rotate="auto"/>
+                </circle>
+                <text font-size="12" text-anchor="middle" dy="4" fill="#000" font-weight="bold">🚘
+                  <animateMotion path="M 110 180 L 405 180 L 405 130" dur="${4 / navSpeed}s" repeatCount="indefinite" rotate="auto"/>
+                </text>
+              </g>
+            ` : ''}
+
+            <!-- Target Marker on Slot P18 -->
             <circle cx="405" cy="130" r="14" fill="none" stroke="#f59e0b" stroke-width="3">
               <animate attributeName="r" values="8;18;8" dur="1.5s" repeatCount="indefinite"/>
               <animate attributeName="opacity" values="1;0.2;1" dur="1.5s" repeatCount="indefinite"/>
