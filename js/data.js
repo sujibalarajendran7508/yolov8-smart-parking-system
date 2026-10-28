@@ -1,15 +1,15 @@
 /* ==========================================================================
-   AI Smart Parking System - State & Demo Dataset (Phase 2 Upgrade)
+   AI Smart Parking System - State & Demo Dataset (Final 100% Completion)
    ========================================================================== */
 
 function createInitialSlotsForFacility(facilityId = 'ground') {
   const slots = [];
   let totalCount = 50;
-  let zones = ['Zone A (East Deck)', 'Zone B (Central)', 'Zone C (West Plaza)', 'Zone D (Executive)'];
+  let zones = ['Zone A (East Deck)', 'Zone B (Central)', 'Zone C (West Plaza)', 'Zone D (Executive)', 'EV Green Charging Hub'];
 
   if (facilityId === 'tower') {
     totalCount = 80;
-    zones = ['Floor 1 (Deck A)', 'Floor 2 (Deck B)', 'Floor 3 (Deck C)', 'VIP Roof Level'];
+    zones = ['Floor 1 (Deck A)', 'Floor 2 (Deck B)', 'Floor 3 (Deck C)', 'VIP Roof Level', 'EV Fast Charge Station'];
   } else if (facilityId === 'plaza') {
     totalCount = 30;
     zones = ['Plaza North', 'Plaza South', 'EV Charging Hub'];
@@ -17,19 +17,30 @@ function createInitialSlotsForFacility(facilityId = 'ground') {
 
   // Generate deterministic occupied ratio (~60%)
   for (let i = 1; i <= totalCount; i++) {
+    const isEV = i <= 4; // Slots P01 to P04 are designated EV Charging Bays
     const isOccupied = (i % 3 !== 0) && (i % 5 !== 0 || i % 2 === 0);
-    const slotId = `P${i < 10 ? '0' + i : i}`;
-    const zoneIndex = Math.floor((i - 1) / (totalCount / zones.length)) % zones.length;
+    const slotId = isEV ? `EV${i < 10 ? '0' + i : i}` : `P${i < 10 ? '0' + i : i}`;
+    const zoneIndex = isEV ? (zones.length - 1) : Math.floor((i - 1) / (totalCount / (zones.length - 1))) % (zones.length - 1);
 
     let vehicleInfo = null;
+    let isEVViolation = false;
+
     if (isOccupied) {
-      const vehicleTypes = ['Sedan', 'SUV', 'Hatchback', 'EV Compact', 'Truck'];
+      const vehicleTypes = isEV ? ['EV Sedan (Tesla Model 3)', 'EV SUV (Hyundai Ioniq 5)', 'Diesel Sedan (Violation!)', 'EV Hatchback'] : ['Sedan', 'SUV', 'Hatchback', 'EV Compact', 'Truck'];
       const plates = ['KA-05-MD-4812', 'MH-12-RT-9920', 'DL-01-AB-1102', 'WB-02-XY-7734', 'TN-09-ZZ-3301'];
+      const vType = vehicleTypes[i % vehicleTypes.length];
+      
+      // Simulate EV bay violation if non-EV vehicle is in EV spot
+      if (isEV && vType.includes('Violation')) {
+        isEVViolation = true;
+      }
+
       vehicleInfo = {
-        type: vehicleTypes[i % vehicleTypes.length],
+        type: vType,
         plate: plates[i % plates.length],
-        confidence: (89 + (i % 9)).toFixed(1),
-        parkedTime: `${(i * 7) % 180 + 12} mins ago`
+        confidence: (90 + (i % 8) + Math.random()).toFixed(1),
+        parkedTime: `${(i * 7) % 180 + 12} mins ago`,
+        isEV: isEV && !isEVViolation
       };
     }
 
@@ -37,8 +48,10 @@ function createInitialSlotsForFacility(facilityId = 'ground') {
       id: slotId,
       number: i,
       status: isOccupied ? 'OCCUPIED' : 'AVAILABLE',
+      isEVBay: isEV,
+      isEVViolation: isEVViolation,
       zone: zones[zoneIndex],
-      distance: 60 + (i * 4),
+      distance: 50 + (i * 4),
       isRecommended: slotId === 'P18',
       vehicle: vehicleInfo,
       reservation: null
@@ -69,6 +82,33 @@ window.SmartParkingStore = {
   visionFilterMode: 'normal', // 'normal', 'heatmap', 'night'
   customROIs: [],
   lastUpdated: new Date().toLocaleTimeString(),
+
+  // Security Operator & Gate State
+  isOperatorMode: false,
+  barrierState: 'CLOSED', // 'OPEN', 'CLOSED'
+  isEmergencyLockdown: false,
+  blacklistPlates: ['DL-01-XX-9999', 'MH-04-ST-0000', 'KA-03-CR-6666'],
+
+  // ALPR (Automatic License Plate Recognition) Gate Records
+  alprRecords: [
+    { id: 'REC-101', time: '1 min ago', plate: 'KA-05-MD-4812', vehicle: 'Sedan (White)', confidence: 97.8, status: 'AUTHORIZED', action: 'Barrier Auto-Opened' },
+    { id: 'REC-102', time: '4 mins ago', plate: 'MH-12-RT-9920', vehicle: 'SUV (Black)', confidence: 96.2, status: 'RESERVATION_MATCH', action: 'Directed to Slot P18' },
+    { id: 'REC-103', time: '9 mins ago', plate: 'DL-01-XX-9999', vehicle: 'Van (Silver)', confidence: 98.4, status: 'BLACKLIST_ALERT', action: 'Security Notified / Barrier Held' },
+    { id: 'REC-104', time: '15 mins ago', plate: 'WB-02-XY-7734', vehicle: 'EV Compact (Blue)', confidence: 95.1, status: 'AUTHORIZED', action: 'Routed to EV-01' }
+  ],
+
+  // Predictive AI Peak-Hour Forecasting Dataset
+  predictiveForecast: {
+    currentTime: '14:00',
+    currentOccupancy: 64,
+    predictions: [
+      { time: '14:00 (Now)', occupancy: 64, confidence: 98, status: 'Moderate Flow' },
+      { time: '+1 Hour (15:00)', occupancy: 78, confidence: 94, status: 'Building Traffic' },
+      { time: '+2 Hours (16:00)', occupancy: 89, confidence: 91, status: 'Peak Inflow Expected' },
+      { time: '+4 Hours (18:00)', occupancy: 93, confidence: 88, status: 'Maximum Congestion' },
+      { time: '+24 Hours (Next Day)', occupancy: 62, confidence: 85, status: 'Standard Baseline' }
+    ]
+  },
 
   // CCTV Camera presets for AI Detection Demo
   cameras: {
@@ -109,7 +149,7 @@ window.SmartParkingStore = {
       bgGradient: 'linear-gradient(135deg, #111827 0%, #1f2937 100%)',
       boxes: [
         { label: 'EV Compact 98%', x: 25, y: 35, w: 20, h: 26, status: 'OCCUPIED' },
-        { label: 'Slot P24 - FREE', x: 50, y: 35, w: 20, h: 26, status: 'AVAILABLE' }
+        { label: 'Slot EV-02 - FREE', x: 50, y: 35, w: 20, h: 26, status: 'AVAILABLE' }
       ]
     }
   },
@@ -129,8 +169,9 @@ window.SmartParkingStore = {
     const occupied = this.slots.filter(s => s.status === 'OCCUPIED').length;
     const reserved = this.slots.filter(s => s.status === 'RESERVED').length;
     const available = total - occupied - reserved;
+    const evViolations = this.slots.filter(s => s.isEVViolation).length;
     const percentage = Math.round(((occupied + reserved) / total) * 100);
-    return { total, occupied, reserved, available, percentage };
+    return { total, occupied, reserved, available, evViolations, percentage };
   },
 
   // Switch facility
@@ -170,6 +211,60 @@ window.SmartParkingStore = {
     return slot.reservation;
   },
 
+  // Trigger ALPR Gate Entry Simulation
+  simulateALPRScan(customPlate = null) {
+    const plates = ['KA-05-MD-4812', 'MH-12-RT-9920', 'DL-01-AB-1102', 'WB-02-XY-7734', 'TN-09-ZZ-3301', 'DL-01-XX-9999'];
+    const vehicleTypes = ['Sedan (White)', 'SUV (Black)', 'Hatchback (Silver)', 'EV Compact (Blue)', 'Pickup (Grey)'];
+    
+    const plate = customPlate || plates[Math.floor(Math.random() * plates.length)];
+    const vehicle = vehicleTypes[Math.floor(Math.random() * vehicleTypes.length)];
+    const isBlacklisted = this.blacklistPlates.includes(plate);
+    const confidence = (94 + Math.random() * 5).toFixed(1);
+
+    // Check if matching reservation exists
+    const matchingSlot = this.slots.find(s => s.reservation && s.reservation.plateNumber.toUpperCase() === plate.toUpperCase());
+    
+    let status = 'AUTHORIZED';
+    let action = 'Barrier Auto-Opened';
+
+    if (isBlacklisted) {
+      status = 'BLACKLIST_ALERT';
+      action = 'Security Alert Triggered / Barrier Held';
+      this.barrierState = 'CLOSED';
+    } else if (matchingSlot) {
+      status = 'RESERVATION_MATCH';
+      action = `Auto-Directed to Reserved Slot ${matchingSlot.id}`;
+      this.barrierState = 'OPEN';
+    } else {
+      this.barrierState = 'OPEN';
+    }
+
+    const record = {
+      id: 'REC-' + Math.floor(100 + Math.random() * 900),
+      time: 'Just now',
+      plate,
+      vehicle,
+      confidence,
+      status,
+      action
+    };
+
+    this.alprRecords.unshift(record);
+    if (this.alprRecords.length > 8) this.alprRecords.pop();
+
+    this.activityLog.unshift({
+      id: Date.now(),
+      time: 'Just now',
+      type: 'ALPR',
+      slot: matchingSlot ? matchingSlot.id : 'ENTRY GATE',
+      text: `ALPR Gate: Scanned ${plate} (${vehicle}) - ${status}. ${action}.`,
+      badge: isBlacklisted ? 'danger' : 'ai'
+    });
+
+    this.lastUpdated = new Date().toLocaleTimeString();
+    return record;
+  },
+
   // Random Traffic Ticker Event Generator
   triggerRandomTrafficEvent() {
     const randomSlot = this.slots[Math.floor(Math.random() * this.slots.length)];
@@ -178,6 +273,7 @@ window.SmartParkingStore = {
     if (randomSlot.status === 'OCCUPIED') {
       randomSlot.status = 'AVAILABLE';
       randomSlot.vehicle = null;
+      randomSlot.isEVViolation = false;
       this.activityLog.unshift({
         id: Date.now(),
         time: 'Just now',
@@ -189,23 +285,30 @@ window.SmartParkingStore = {
     } else if (randomSlot.status === 'AVAILABLE') {
       randomSlot.status = 'OCCUPIED';
       const plates = ['KA-01-EQ-9920', 'MH-04-AB-1234', 'DL-09-CC-5544', 'TN-07-ZZ-7788'];
+      const isEvViolation = randomSlot.isEVBay && Math.random() > 0.5;
+      
+      randomSlot.isEVViolation = isEvViolation;
       randomSlot.vehicle = {
-        type: 'Auto Sedan',
+        type: isEvViolation ? 'Diesel SUV (Violation!)' : (randomSlot.isEVBay ? 'Tesla Model 3' : 'Auto Sedan'),
         plate: plates[Math.floor(Math.random() * plates.length)],
         confidence: (92 + Math.random() * 6).toFixed(1),
-        parkedTime: 'Just now'
+        parkedTime: 'Just now',
+        isEV: randomSlot.isEVBay && !isEvViolation
       };
+
       this.activityLog.unshift({
         id: Date.now(),
         time: 'Just now',
-        type: 'ENTRY',
+        type: isEvViolation ? 'ALERT' : 'ENTRY',
         slot: randomSlot.id,
-        text: `Auto Traffic Ticker: YOLOv8 detected vehicle entry in Slot ${randomSlot.id}. Slot is now OCCUPIED.`,
-        badge: 'occupied'
+        text: isEvViolation 
+          ? `SECURITY ALERT: Non-EV Vehicle illegally parked in EV Bay ${randomSlot.id}!` 
+          : `Auto Traffic Ticker: YOLOv8 detected vehicle entry in Slot ${randomSlot.id}. Slot is now OCCUPIED.`,
+        badge: isEvViolation ? 'danger' : 'occupied'
       });
     }
 
-    if (this.activityLog.length > 12) this.activityLog.pop();
+    if (this.activityLog.length > 15) this.activityLog.pop();
     this.lastUpdated = new Date().toLocaleTimeString();
   },
 
@@ -218,6 +321,7 @@ window.SmartParkingStore = {
       slot.status = 'AVAILABLE';
       slot.vehicle = null;
       slot.reservation = null;
+      slot.isEVViolation = false;
       this.activityLog.unshift({
         id: Date.now(),
         time: 'Just now',
@@ -229,10 +333,11 @@ window.SmartParkingStore = {
     } else {
       slot.status = 'OCCUPIED';
       slot.vehicle = {
-        type: 'Sedan',
+        type: slot.isEVBay ? 'EV Sedan' : 'Sedan',
         plate: 'SIM-' + Math.floor(1000 + Math.random() * 9000),
         confidence: '95.8',
-        parkedTime: 'Just now'
+        parkedTime: 'Just now',
+        isEV: slot.isEVBay
       };
       this.activityLog.unshift({
         id: Date.now(),
